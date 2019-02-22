@@ -1,16 +1,5 @@
 package derekzuk.agent.instrument.extension;
 
-import static net.bytebuddy.matcher.ElementMatchers.isAnnotatedWith;
-import static net.bytebuddy.matcher.ElementMatchers.named;
-
-import java.io.*;
-import java.lang.instrument.Instrumentation;
-import java.lang.reflect.Executable;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
-
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.asm.Advice;
 import net.bytebuddy.asm.AsmVisitorWrapper;
@@ -20,6 +9,11 @@ import net.bytebuddy.matcher.ElementMatchers;
 import net.bytebuddy.utility.JavaModule;
 
 import javax.servlet.http.HttpServletResponse;
+import java.lang.instrument.Instrumentation;
+import java.lang.reflect.Executable;
+import java.util.UUID;
+
+import static net.bytebuddy.matcher.ElementMatchers.named;
 
 public class LoggingAgent {
 	private static volatile Instrumentation globalInstrumentation;
@@ -36,47 +30,8 @@ public class LoggingAgent {
 	}
 
 	public static String getIncrementedHeaderCounter() {
-		return String.valueOf(headerCounter++);
-	}
-
-	public static String executePost(String targetURL) {
-		HttpURLConnection connection = null;
-
-		try {
-			//Create connection
-			URL url = new URL(targetURL);
-			connection = (HttpURLConnection) url.openConnection();
-			connection.setRequestMethod("POST");
-			connection.setRequestProperty("Content-Type",
-					"application/x-www-form-urlencoded");
-
-			connection.setUseCaches(false);
-			connection.setDoOutput(true);
-
-			//Send request
-			DataOutputStream wr = new DataOutputStream(
-					connection.getOutputStream());
-			wr.close();
-
-			//Get Response
-			InputStream is = connection.getInputStream();
-			BufferedReader rd = new BufferedReader(new InputStreamReader(is));
-			StringBuilder response = new StringBuilder(); // or StringBuffer if Java version 5+
-			String line;
-			while ((line = rd.readLine()) != null) {
-				response.append(line);
-				response.append('\r');
-			}
-			rd.close();
-			return response.toString();
-		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
-		} finally {
-			if (connection != null) {
-				connection.disconnect();
-			}
-		}
+//		return String.valueOf(headerCounter++);
+		return UUID.randomUUID().toString();
 	}
 
 	/**
@@ -122,8 +77,8 @@ public class LoggingAgent {
 															TypeDescription typeDescription,
 															ClassLoader classLoader,
 															JavaModule javaModule) {
-						return builder.visit(Advice.to(MetricsTransformer.EnterAdvice.class, MetricsTransformer.ExitAdviceMethods.class)
-								.on(isAnnotatedWith(named("org.springframework.web.bind.annotation.RequestMapping")))
+						return builder.visit(Advice.to(MetricsTransformer.EnterAdviceGetMapping.class, MetricsTransformer.ExitAdviceMethodsGetMapping.class)
+								.on(ElementMatchers.isAnnotatedWith(named("org.springframework.web.bind.annotation.GetMapping")))
 						);
 					}
 				})
@@ -136,48 +91,12 @@ public class LoggingAgent {
 												TypeDescription typeDescription,
 												ClassLoader classLoader,
 												JavaModule javaModule) {
-			final AsmVisitorWrapper requestMappingVisitor =
-					Advice.to(EnterAdvice.class, ExitAdviceMethods.class)
-							.on(ElementMatchers.isAnnotatedWith(named("org.springframework.web.bind.annotation.RequestMapping")));
-
 			final AsmVisitorWrapper getMappingVisitor =
 					Advice.to(EnterAdviceGetMapping.class, ExitAdviceMethodsGetMapping.class)
 							.on(ElementMatchers.isAnnotatedWith(named("org.springframework.web.bind.annotation.GetMapping")));
 
 			return builder.visit(getMappingVisitor);
 		}
-
-		private static class EnterAdvice {
-			@Advice.OnMethodEnter
-			static long enter() {
-				return System.nanoTime();
-			}
-		}
-
-		private static class ExitAdviceMethods {
-			@Advice.OnMethodExit(onThrowable = Throwable.class)
-			static void exit(@Advice.Origin final Executable executable,
-							 @Advice.Enter final long startTime,
-							 @Advice.Return Object httpRes) {
-				final long duration = System.nanoTime() - startTime;
-				MetricsCollector.report(executable.toGenericString(), duration);
-//				if (httpRes instanceof ResponseEntity) {
-//					System.out.println("YES IT IS a ResponseEntity");
-//				}
-//				ResponseEntity r = (ResponseEntity) httpRes;
-//				return r;
-			}
-		}
-
-		private static class ExitAdviceConstructors {
-			@Advice.OnMethodExit
-			static void exit(@Advice.Origin final Executable executable,
-							 @Advice.Enter final long startTime) {
-				final long duration = System.nanoTime() - startTime;
-				MetricsCollector.report(executable.toGenericString(), duration);
-			}
-		}
-
 
 		private static class EnterAdviceGetMapping {
 			@Advice.OnMethodEnter
@@ -191,18 +110,24 @@ public class LoggingAgent {
 			static void exit(@Advice.Origin final Executable executable,
 							 @Advice.Enter final long startTime,
 							 @Advice.Argument(0) Object httpRes) {
-//				httpRes is a string...;
+				// Get duration
 				final long duration = System.nanoTime() - startTime;
-				MetricsCollector.report(executable.toGenericString(), duration);
+
+				// Get response object
 				if (httpRes instanceof HttpServletResponse) {
 					System.out.println("This object is an instanceof HttpServletResponse");
 				}
 				HttpServletResponse r = (HttpServletResponse) httpRes;
-				String counter = getIncrementedHeaderCounter();
-				r.setHeader("testheader", counter);
-				System.out.println("Response size: " + getObjectSize(r) + " bytes.");
 
-				System.out.println(executePost("http://localhost:8080/responseEntity/1/2/3"));
+				// Add unique ID to response header
+				String responseUniqueID = getIncrementedHeaderCounter();
+				r.setHeader("responseUniqueID", responseUniqueID);
+
+				// Get response size in bytes
+				final long responseSizeBytes = getObjectSize(r);
+
+				// Create metrics
+				MetricsCollector.report(executable.getName(), duration, responseSizeBytes, responseUniqueID);
 			}
 		}
 	}
