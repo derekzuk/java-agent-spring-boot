@@ -3,8 +3,13 @@ package derekzuk.agent.instrument.extension;
 import static net.bytebuddy.matcher.ElementMatchers.isAnnotatedWith;
 import static net.bytebuddy.matcher.ElementMatchers.named;
 
+import java.io.*;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Executable;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
 
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.asm.Advice;
@@ -34,40 +39,76 @@ public class LoggingAgent {
 		return String.valueOf(headerCounter++);
 	}
 
+	public static String executePost(String targetURL) {
+		HttpURLConnection connection = null;
+
+		try {
+			//Create connection
+			URL url = new URL(targetURL);
+			connection = (HttpURLConnection) url.openConnection();
+			connection.setRequestMethod("POST");
+			connection.setRequestProperty("Content-Type",
+					"application/x-www-form-urlencoded");
+
+			connection.setUseCaches(false);
+			connection.setDoOutput(true);
+
+			//Send request
+			DataOutputStream wr = new DataOutputStream(
+					connection.getOutputStream());
+			wr.close();
+
+			//Get Response
+			InputStream is = connection.getInputStream();
+			BufferedReader rd = new BufferedReader(new InputStreamReader(is));
+			StringBuilder response = new StringBuilder(); // or StringBuffer if Java version 5+
+			String line;
+			while ((line = rd.readLine()) != null) {
+				response.append(line);
+				response.append('\r');
+			}
+			rd.close();
+			return response.toString();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		} finally {
+			if (connection != null) {
+				connection.disconnect();
+			}
+		}
+	}
+
 	/**
 	 * Allows installation of java agent from command line.
 	 *
-	 * @param agentArguments
-	 *            arguments for agent
-	 * @param instrumentation
-	 *            instrumentation instance
+	 * @param agentArguments  arguments for agent
+	 * @param instrumentation instrumentation instance
 	 */
 	public static void premain(String agentArguments,
-			Instrumentation instrumentation) {
+							   Instrumentation instrumentation) {
 		globalInstrumentation = instrumentation;
-        new AgentBuilder.Default()
+		new AgentBuilder.Default()
 				.type(ElementMatchers.isAnnotatedWith(named("org.springframework.web.bind.annotation.RestController")))
-                .transform(new MetricsTransformer())
-                .with(AgentBuilder.Listener.StreamWriting.toSystemOut())
-                .with(AgentBuilder.TypeStrategy.Default.REDEFINE)
-                .installOn(instrumentation);
+				.transform(new MetricsTransformer())
+				.with(AgentBuilder.Listener.StreamWriting.toSystemOut())
+				.with(AgentBuilder.TypeStrategy.Default.REDEFINE)
+				.installOn(instrumentation);
 	}
 
 	/**
 	 * Allows installation of java agent with Attach API.
 	 *
-	 * @param agentArguments
-	 *            arguments for agent
-	 * @param instrumentation
-	 *            instrumentation instance
+	 * @param agentArguments  arguments for agent
+	 * @param instrumentation instrumentation instance
 	 */
 	public static void agentmain(String agentArguments,
-			Instrumentation instrumentation) {
+								 Instrumentation instrumentation) {
 		install(DEMO_INSTRUMENTED_CLASS_NAME, instrumentation);
 	}
 
 	private static void install(String className,
-			Instrumentation instrumentation) {
+								Instrumentation instrumentation) {
 		createAgent(instrumentation);
 	}
 
@@ -116,8 +157,8 @@ public class LoggingAgent {
 		private static class ExitAdviceMethods {
 			@Advice.OnMethodExit(onThrowable = Throwable.class)
 			static void exit(@Advice.Origin final Executable executable,
-									   @Advice.Enter final long startTime,
-									   @Advice.Return Object httpRes) {
+							 @Advice.Enter final long startTime,
+							 @Advice.Return Object httpRes) {
 				final long duration = System.nanoTime() - startTime;
 				MetricsCollector.report(executable.toGenericString(), duration);
 //				if (httpRes instanceof ResponseEntity) {
@@ -148,8 +189,8 @@ public class LoggingAgent {
 		private static class ExitAdviceMethodsGetMapping {
 			@Advice.OnMethodExit(onThrowable = Throwable.class)
 			static void exit(@Advice.Origin final Executable executable,
-							   @Advice.Enter final long startTime,
-							   @Advice.Argument(0) Object httpRes) {
+							 @Advice.Enter final long startTime,
+							 @Advice.Argument(0) Object httpRes) {
 //				httpRes is a string...;
 				final long duration = System.nanoTime() - startTime;
 				MetricsCollector.report(executable.toGenericString(), duration);
@@ -157,8 +198,11 @@ public class LoggingAgent {
 					System.out.println("This object is an instanceof HttpServletResponse");
 				}
 				HttpServletResponse r = (HttpServletResponse) httpRes;
-				r.setHeader("testheader", getIncrementedHeaderCounter());
+				String counter = getIncrementedHeaderCounter();
+				r.setHeader("testheader", counter);
 				System.out.println("Response size: " + getObjectSize(r) + " bytes.");
+
+				System.out.println(executePost("http://localhost:8080/responseEntity/1/2/3"));
 			}
 		}
 	}
