@@ -114,7 +114,7 @@ public class MetricsCollector {
         return minDuration;
     }
 
-    public static String executePost(String targetURL) {
+    private static String executePost(String targetURL) {
         HttpURLConnection connection = null;
 
         try {
@@ -154,7 +154,7 @@ public class MetricsCollector {
         }
     }
 
-    public static Map<String, MetricRecord> getEntries() {
+    public static Map<String, MetricRecord> getMetricRecords() {
         return Collections.unmodifiableMap(metricRecords);
     }
 }
