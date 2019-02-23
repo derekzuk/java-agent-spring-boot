@@ -15,11 +15,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Collects metrics on method calls.
+ * Collects metrics on HTTP requests
  *
- * Counts the total number of method calls and
- * the average duration of method execution (with Exponential moving average
- * https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average).
+ * Establishes the following metrics for each HTTP request:
+ * Average duration (exponential moving average)
+ * Minimum duration
+ * Maximum duration
+ * Average response size (bytes)
+ * Minimum response size
+ * Maximum response size
+ * Count of times the HTTP request has been executed
  */
 public class MetricsCollector {
 
@@ -29,6 +34,9 @@ public class MetricsCollector {
 
     /**
      * Report method call metrics.
+     *
+     * Reports are occasionally sent to the external monitoring website.
+     * We only report occasionally in order to reduce the impact the agent has on the application.
      */
     public static void report(final String methodName,
                               final long duration,
@@ -43,17 +51,12 @@ public class MetricsCollector {
                         return new MetricRecord(1L, duration, responseSize);
                     }
 
-                    // Determine min duration
+                    // Establish metrics
                     long minDuration = determineMinDuration(curr, duration);
-                    // Determine max duration
                     long maxDuration = determineMaxDuration(curr, duration);
-                    // Determine average duration
                     final long newAvgDuration = calculateEMA(true, curr.getAvgDuration(), duration);
-                    // Deterimine min response size
                     long minResponseSize = determineMinResponseSize(curr, responseSize);
-                    // Deterimine max response size
                     long maxResponseSize = determineMaxResponseSize(curr, responseSize);
-                    // Determine average response size
                     final long newAvgResponseSize = calculateEMA(false, curr.getAvgResponseSize(), responseSize);
 
                     // Occasionally report to standalone web app
