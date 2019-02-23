@@ -1,5 +1,8 @@
 package derekzuk.agent.instrument.extension;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.InputStream;
@@ -9,6 +12,7 @@ import java.net.URL;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Collects metrics on method calls.
@@ -20,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MetricsCollector {
 
     private static final ConcurrentHashMap<String, MetricRecord> metricRecords = new ConcurrentHashMap<>();
+    static AtomicInteger counter = new AtomicInteger(0);
     public static final double alpha = 0.5;
 
     /**
@@ -51,19 +56,11 @@ public class MetricsCollector {
                     // Determine average response size
                     final long newAvgResponseSize = calculateEMA(false, curr.getAvgResponseSize(), responseSize);
 
-                    // Report to standalone web app
-                    executePost("http://localhost:8081/responseEntity/"
-                            + methodName
-                            + "/" + requestUniqueID
-                            + "/" + duration
-                            + "/" + newAvgDuration
-                            + "/" + minDuration
-                            + "/" + maxDuration
-                            + "/" + responseSize
-                            + "/" + newAvgResponseSize
-                            + "/" + minResponseSize
-                            + "/" + maxResponseSize);
-
+                    // Occasionally report to standalone web app
+                    if (counter.incrementAndGet() > 10) {
+                        executePost(getMetricRecords());
+                        counter.set(0);
+                    }
 
                     return new MetricRecord(curr.getCallCounts() + 1,
                             newAvgDuration,
@@ -122,23 +119,27 @@ public class MetricsCollector {
         return minDuration;
     }
 
-    private static String executePost(String targetURL) {
+    private static String executePost(Map<String, MetricRecord> metricRecords) {
         HttpURLConnection connection = null;
 
         try {
             //Create connection
-            URL url = new URL(targetURL);
+            URL url = new URL("http://localhost:8081/processMetricRecords");
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type",
-                    "application/x-www-form-urlencoded");
+            connection.setRequestProperty("Content-Type", "application/json");
 
             connection.setUseCaches(false);
             connection.setDoOutput(true);
 
+            ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
+            String json = ow.writeValueAsString(metricRecords);
+
             //Send request
             DataOutputStream wr = new DataOutputStream(
                     connection.getOutputStream());
+            wr.writeBytes(json);
+            wr.flush();
             wr.close();
 
             //Get Response
