@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class MetricsCollector {
 
-    private static final ConcurrentHashMap<String, Entry> entries = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, MetricRecord> metricRecords = new ConcurrentHashMap<>();
     private static final double alpha = 0.015;
 
     /**
@@ -30,47 +30,26 @@ public class MetricsCollector {
                               final long responseSize,
                               final String requestUniqueID) {
 
-        entries.compute(methodName,
+        metricRecords.compute(methodName,
                 (final String key,
-                 final Entry curr) -> {
+                 final MetricRecord curr) -> {
                     // If no record exists for the given method name, create a new record
                     if (curr == null) {
-                        return new Entry(1L, duration, responseSize);
+                        return new MetricRecord(1L, duration, responseSize);
                     }
 
                     // Determine min duration
-                    long curMinDuration = curr.getMinDuration();
-                    long minDuration;
-                    if (duration < curMinDuration) {
-                        minDuration = duration;
-                    } else {
-                        minDuration = curMinDuration;
-                    }
-
+                    long minDuration = determineMinDuration(curr, duration);
                     // Determine max duration
-                    long currMaxDuration = curr.getMaxDuration();
-                    long maxDuration;
-                    if (duration > currMaxDuration) {
-                        maxDuration = duration;
-                    } else {
-                        maxDuration = currMaxDuration;
-                    }
-
+                    long maxDuration = determineMaxDuration(curr, duration);
                     // Determine average duration
                     final long newAvgDuration = Math.round(
                             curr.getAvgDuration() * (1 - alpha) + duration * alpha
                     );
-
                     // Deterimine min response size
-                    long currMinResponseSize = curr.getMinResponseSize();
-                    long minResponseSize;
-                    minResponseSize = responseSize < currMinResponseSize ? responseSize : currMinResponseSize;
-
+                    long minResponseSize = determineMinResponseSize(curr, responseSize);
                     // Deterimine max response size
-                    long currMaxResponseSize = curr.getMaxResponseSize();
-                    long maxResponseSize;
-                    maxResponseSize = responseSize > currMaxResponseSize ? responseSize : currMaxResponseSize;
-
+                    long maxResponseSize = determineMaxResponseSize(curr, responseSize);
                     // Determine average response size
                     final long newAvgResponseSize = Math.round(
                             curr.getAvgResponseSize() * (1 - alpha) + responseSize * alpha
@@ -90,7 +69,7 @@ public class MetricsCollector {
                             + "/" + maxResponseSize);
 
 
-                    return new Entry(curr.getCallCounts() + 1,
+                    return new MetricRecord(curr.getCallCounts() + 1,
                             newAvgDuration,
                             minDuration,
                             maxDuration,
@@ -99,6 +78,40 @@ public class MetricsCollector {
                             maxResponseSize);
                 });
 
+    }
+
+    private static long determineMaxResponseSize(MetricRecord curr, long responseSize) {
+        long currMaxResponseSize = curr.getMaxResponseSize();
+        long maxResponseSize;
+        return responseSize > currMaxResponseSize ? responseSize : currMaxResponseSize;
+    }
+
+    private static long determineMinResponseSize(MetricRecord curr, long responseSize) {
+        long currMinResponseSize = curr.getMinResponseSize();
+        long minResponseSize;
+        return responseSize < currMinResponseSize ? responseSize : currMinResponseSize;
+    }
+
+    private static long determineMaxDuration(MetricRecord curr, long duration) {
+        long currMaxDuration = curr.getMaxDuration();
+        long maxDuration;
+        if (duration > currMaxDuration) {
+            maxDuration = duration;
+        } else {
+            maxDuration = currMaxDuration;
+        }
+        return maxDuration;
+    }
+
+    private static long determineMinDuration(MetricRecord curr, long duration) {
+        long curMinDuration = curr.getMinDuration();
+        long minDuration;
+        if (duration < curMinDuration) {
+            minDuration = duration;
+        } else {
+            minDuration = curMinDuration;
+        }
+        return minDuration;
     }
 
     public static String executePost(String targetURL) {
@@ -141,71 +154,7 @@ public class MetricsCollector {
         }
     }
 
-    public static class Entry {
-        private final long callCounts;
-        private final long avgDuration;
-        private final long minDuration;
-        private final long maxDuration;
-        private final long avgResponseSize;
-        private final long minResponseSize;
-        private final long maxResponseSize;
-
-        private Entry(final long callCounts,
-                      final long avgDuration,
-                      final long minDuration,
-                      final long maxDuration,
-                      final long avgResponseSize,
-                      final long minResponseSize,
-                      final long maxResponseSize) {
-            this.callCounts = callCounts;
-            this.avgDuration = avgDuration;
-            this.minDuration = minDuration;
-            this.maxDuration = maxDuration;
-            this.avgResponseSize = avgResponseSize;
-            this.minResponseSize = minResponseSize;
-            this.maxResponseSize = maxResponseSize;
-        }
-
-        public Entry(long callCounts, long duration, long responseSize) {
-            this.callCounts = callCounts;
-            this.avgDuration = duration;
-            this.minDuration = duration;
-            this.maxDuration = duration;
-            this.avgResponseSize = responseSize;
-            this.minResponseSize = responseSize;
-            this.maxResponseSize = responseSize;
-        }
-
-        public long getCallCounts() {
-            return callCounts;
-        }
-
-        public long getAvgDuration() {
-            return avgDuration;
-        }
-
-        public long getMinDuration() {
-            return minDuration;
-        }
-
-        public long getMaxDuration() {
-            return maxDuration;
-        }
-
-        public long getAvgResponseSize() {
-            return avgResponseSize;
-        }
-
-        public long getMinResponseSize() {
-            return minResponseSize;
-        }
-
-        public long getMaxResponseSize() {
-            return maxResponseSize;
-        }
-    }
-
-    public static Map<String, Entry> getEntries() {
-        return Collections.unmodifiableMap(entries);
+    public static Map<String, MetricRecord> getEntries() {
+        return Collections.unmodifiableMap(metricRecords);
     }
 }
