@@ -15,7 +15,7 @@ import java.util.UUID;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
 
-public class LoggingAgent {
+public class HttpServletResponseAgent {
 	private static volatile Instrumentation globalInstrumentation;
 
 	private static volatile int headerCounter = 0;

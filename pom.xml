@@ -55,8 +55,8 @@
 					<appendAssemblyId>false</appendAssemblyId>
 					<archive>
 						<manifestEntries>
-							<Premain-Class>derekzuk.agent.instrument.extension.LoggingAgent</Premain-Class>
-							<Agent-Class>derekzuk.agent.instrument.extension.LoggingAgent</Agent-Class>
+							<Premain-Class>derekzuk.agent.instrument.extension.HttpServletResponseAgent</Premain-Class>
+							<Agent-Class>derekzuk.agent.instrument.extension.HttpServletResponseAgent</Agent-Class>
 							<Can-Redefine-Classes>true</Can-Redefine-Classes>
 							<Can-Retransform-Classes>true</Can-Retransform-Classes>
 							<Can-Set-Native-Method-Prefix>true</Can-Set-Native-Method-Prefix>
