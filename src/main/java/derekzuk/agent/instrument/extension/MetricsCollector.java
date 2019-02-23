@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MetricsCollector {
 
     private static final ConcurrentHashMap<String, MetricRecord> metricRecords = new ConcurrentHashMap<>();
-    private static final double alpha = 0.015;
+    public static final double alpha = 0.5;
 
     /**
      * Report method call metrics.
@@ -43,17 +43,13 @@ public class MetricsCollector {
                     // Determine max duration
                     long maxDuration = determineMaxDuration(curr, duration);
                     // Determine average duration
-                    final long newAvgDuration = Math.round(
-                            curr.getAvgDuration() * (1 - alpha) + duration * alpha
-                    );
+                    final long newAvgDuration = calculateEMA(true, curr.getAvgDuration(), duration);
                     // Deterimine min response size
                     long minResponseSize = determineMinResponseSize(curr, responseSize);
                     // Deterimine max response size
                     long maxResponseSize = determineMaxResponseSize(curr, responseSize);
                     // Determine average response size
-                    final long newAvgResponseSize = Math.round(
-                            curr.getAvgResponseSize() * (1 - alpha) + responseSize * alpha
-                    );
+                    final long newAvgResponseSize = calculateEMA(false, curr.getAvgResponseSize(), responseSize);
 
                     // Report to standalone web app
                     executePost("http://localhost:8081/responseEntity/"
@@ -78,6 +74,18 @@ public class MetricsCollector {
                             maxResponseSize);
                 });
 
+    }
+
+    public static long calculateEMA(boolean isDuration, long currentVal, long newVal) {
+        if (isDuration) {
+            return Math.round(
+                    currentVal * (1 - alpha) + newVal * alpha
+            );
+        } else {
+            return Math.round(
+                    currentVal * (1 - alpha) + newVal * alpha
+            );
+        }
     }
 
     private static long determineMaxResponseSize(MetricRecord curr, long responseSize) {

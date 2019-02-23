@@ -14,7 +14,7 @@ public class MetricsCollectorTest {
     @Test
     public void testReport() {
         MetricsCollector mc = new MetricsCollector();
-        String testMethodName = "testMethodName";
+        String testMethodName = "testReportMethodName";
         long duration = 1;
         long responseSize = 2;
         String requestUniqueID = "requestUniqueID";
@@ -38,29 +38,33 @@ public class MetricsCollectorTest {
     public void testReportMultipleRequests() {
         MetricsCollector mc = new MetricsCollector();
 
+        // Setup test variables
+        String testMethodName = "testReportMultipleRequestsMethodName";
+        long firstDuration = 100;
+        long secondDuration = 300;
+        long firstResponseSize = 200;
+        long secondResponseSize = 400;
+        String firstRequestUniqueID = "requestUniqueID";
+        String secondRequestUniqueID = "secondRequestUniqueID";
+        long finalAvgDuration = mc.calculateEMA(true, firstDuration, secondDuration);
+        long finalAvgResponseSize = mc.calculateEMA(false, firstResponseSize, secondResponseSize);
+
         // Request 1
-        String testMethodName = "testMethodName";
-        long duration = 100;
-        long responseSize = 200;
-        String requestUniqueID = "requestUniqueID";
-        mc.report(testMethodName, duration, responseSize, requestUniqueID);
+        mc.report(testMethodName, firstDuration, firstResponseSize, firstRequestUniqueID);
 
         // Request 2
-        duration = 300;
-        responseSize = 400;
-        requestUniqueID = "requestUniqueID2";
-        mc.report(testMethodName, duration, responseSize, requestUniqueID);
+        mc.report(testMethodName, secondDuration, secondResponseSize, secondRequestUniqueID);
 
         Map<String, MetricRecord> metricRecords = mc.getMetricRecords();
 
         assertTrue(metricRecords.containsKey(testMethodName));
         assertFalse(metricRecords.containsKey("nonexistantMethodName"));
-        assertEquals(metricRecords.get(testMethodName).getAvgDuration(), 103);
-        assertEquals(metricRecords.get(testMethodName).getMinDuration(), 100);
-        assertEquals(metricRecords.get(testMethodName).getMaxDuration(), 300);
-        assertEquals(metricRecords.get(testMethodName).getAvgResponseSize(), 203);
-        assertEquals(metricRecords.get(testMethodName).getMinResponseSize(), 200);
-        assertEquals(metricRecords.get(testMethodName).getMaxResponseSize(), 400);
+        assertEquals(metricRecords.get(testMethodName).getAvgDuration(), finalAvgDuration);
+        assertEquals(metricRecords.get(testMethodName).getMinDuration(), firstDuration);
+        assertEquals(metricRecords.get(testMethodName).getMaxDuration(), secondDuration);
+        assertEquals(metricRecords.get(testMethodName).getAvgResponseSize(), finalAvgResponseSize);
+        assertEquals(metricRecords.get(testMethodName).getMinResponseSize(), firstResponseSize);
+        assertEquals(metricRecords.get(testMethodName).getMaxResponseSize(), secondResponseSize);
         assertEquals(metricRecords.get(testMethodName).getCallCounts(), 2);
     }
 }
