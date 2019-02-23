@@ -71,16 +71,12 @@ public class MetricsCollector {
                               final long responseSize,
                               final String requestUniqueID) {
 
-//        Metrics: Calculate minimum, average, and maximum for Request Time and Response Size.
-//        Implement a page that will display the metrics gathered by the extension.
-//          The display should include minimum, average, and maximum of both Request Time and Response Size.
-
         entries.compute(methodName,
                 (final String key,
                  final Entry curr) -> {
                     // If no record exists for the given method name, create a new record
                     if (curr == null) {
-                        return new Entry(1L, duration, duration, duration, responseSize, responseSize, responseSize);
+                        return new Entry(1L, duration, responseSize);
                     }
 
                     // Determine min duration
@@ -170,6 +166,16 @@ public class MetricsCollector {
             this.avgResponseSize = avgResponseSize;
             this.minResponseSize = minResponseSize;
             this.maxResponseSize = maxResponseSize;
+        }
+
+        public Entry(long callCounts, long duration, long responseSize) {
+            this.callCounts = callCounts;
+            this.avgDuration = duration;
+            this.minDuration = duration;
+            this.maxDuration = duration;
+            this.avgResponseSize = responseSize;
+            this.minResponseSize = responseSize;
+            this.maxResponseSize = responseSize;
         }
 
         public long getCallCounts() {

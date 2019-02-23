@@ -23,14 +23,10 @@ public class LoggingAgent {
 	private static final String DEMO_INSTRUMENTED_CLASS_NAME = "com.derekzuk.springbootangular.hello.GreetingController";
 
 	public static long getObjectSize(final Object object) {
-		if (globalInstrumentation == null) {
-			throw new IllegalStateException("Agent not initialized.");
-		}
 		return globalInstrumentation.getObjectSize(object);
 	}
 
 	public static String getIncrementedHeaderCounter() {
-//		return String.valueOf(headerCounter++);
 		return UUID.randomUUID().toString();
 	}
 
@@ -62,8 +58,7 @@ public class LoggingAgent {
 		install(DEMO_INSTRUMENTED_CLASS_NAME, instrumentation);
 	}
 
-	private static void install(String className,
-								Instrumentation instrumentation) {
+	private static void install(String className, Instrumentation instrumentation) {
 		createAgent(instrumentation);
 	}
 
@@ -72,15 +67,19 @@ public class LoggingAgent {
 				.with(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
 				.type(ElementMatchers.isAnnotatedWith(named("org.springframework.web.bind.annotation.RestController")))
 				.transform(new AgentBuilder.Transformer() {
+
 					@Override
 					public DynamicType.Builder<?> transform(DynamicType.Builder<?> builder,
 															TypeDescription typeDescription,
 															ClassLoader classLoader,
 															JavaModule javaModule) {
-						return builder.visit(Advice.to(MetricsTransformer.EnterAdviceGetMapping.class, MetricsTransformer.ExitAdviceMethodsGetMapping.class)
+						return builder.visit(Advice.to(MetricsTransformer.EnterAdvice.class, MetricsTransformer.ExitAdviceMethods.class)
 								.on(ElementMatchers.isAnnotatedWith(named("org.springframework.web.bind.annotation.GetMapping")))
+						).visit(Advice.to(MetricsTransformer.EnterAdvice.class, MetricsTransformer.ExitAdviceMethods.class)
+								.on(ElementMatchers.isAnnotatedWith(named("org.springframework.web.bind.annotation.PostMapping")))
 						);
 					}
+
 				})
 				.with(AgentBuilder.Listener.StreamWriting.toSystemOut());
 	}
@@ -92,20 +91,24 @@ public class LoggingAgent {
 												ClassLoader classLoader,
 												JavaModule javaModule) {
 			final AsmVisitorWrapper getMappingVisitor =
-					Advice.to(EnterAdviceGetMapping.class, ExitAdviceMethodsGetMapping.class)
+					Advice.to(EnterAdvice.class, ExitAdviceMethods.class)
 							.on(ElementMatchers.isAnnotatedWith(named("org.springframework.web.bind.annotation.GetMapping")));
 
-			return builder.visit(getMappingVisitor);
+			final AsmVisitorWrapper postMappingVisitor =
+					Advice.to(EnterAdvice.class, ExitAdviceMethods.class)
+							.on(ElementMatchers.isAnnotatedWith(named("org.springframework.web.bind.annotation.PostMapping")));
+
+			return builder.visit(getMappingVisitor).visit(postMappingVisitor);
 		}
 
-		private static class EnterAdviceGetMapping {
+		private static class EnterAdvice {
 			@Advice.OnMethodEnter
 			static long enter() {
 				return System.nanoTime();
 			}
 		}
 
-		private static class ExitAdviceMethodsGetMapping {
+		private static class ExitAdviceMethods {
 			@Advice.OnMethodExit(onThrowable = Throwable.class)
 			static void exit(@Advice.Origin final Executable executable,
 							 @Advice.Enter final long startTime,
@@ -114,9 +117,6 @@ public class LoggingAgent {
 				final long duration = System.nanoTime() - startTime;
 
 				// Get response object
-				if (httpRes instanceof HttpServletResponse) {
-					System.out.println("This object is an instanceof HttpServletResponse");
-				}
 				HttpServletResponse r = (HttpServletResponse) httpRes;
 
 				// Add unique ID to response header
