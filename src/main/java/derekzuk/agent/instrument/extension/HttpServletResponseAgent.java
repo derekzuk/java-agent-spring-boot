@@ -13,7 +13,6 @@ import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Executable;
 import java.util.UUID;
 
-import static net.bytebuddy.matcher.ElementMatchers.any;
 import static net.bytebuddy.matcher.ElementMatchers.isAnnotatedWith;
 import static net.bytebuddy.matcher.ElementMatchers.named;
 
@@ -75,6 +74,8 @@ public class HttpServletResponseAgent {
 								.on(ElementMatchers.isAnnotatedWith(named("org.springframework.web.bind.annotation.GetMapping")))
 						).visit(Advice.to(MetricsTransformer.EnterAdvice.class, MetricsTransformer.ExitAdviceMethods.class)
 								.on(ElementMatchers.isAnnotatedWith(named("org.springframework.web.bind.annotation.PostMapping")))
+						).visit(Advice.to(MetricsTransformer.EnterAdvice.class, MetricsTransformer.ExitAdviceMethods.class)
+								.on(ElementMatchers.isAnnotatedWith(named("org.springframework.web.bind.annotation.PutMapping")))
 						);
 					}
 
@@ -96,7 +97,11 @@ public class HttpServletResponseAgent {
 					Advice.to(EnterAdvice.class, ExitAdviceMethods.class)
 							.on(ElementMatchers.isAnnotatedWith(named("org.springframework.web.bind.annotation.PostMapping")));
 
-			return builder.visit(getMappingVisitor).visit(postMappingVisitor);
+			final AsmVisitorWrapper putMappingVisitor =
+					Advice.to(EnterAdvice.class, ExitAdviceMethods.class)
+							.on(ElementMatchers.isAnnotatedWith(named("org.springframework.web.bind.annotation.PostMapping")));
+
+			return builder.visit(getMappingVisitor).visit(postMappingVisitor).visit(putMappingVisitor);
 		}
 
 		private static class EnterAdvice {
