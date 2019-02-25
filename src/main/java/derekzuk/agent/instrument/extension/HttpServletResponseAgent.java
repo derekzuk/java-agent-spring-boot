@@ -29,6 +29,7 @@ public class HttpServletResponseAgent {
 
 	/**
 	 * Allows installation of java agent from command line.
+	 * See README for instructions
 	 *
 	 * @param agentArguments  arguments for agent
 	 * @param instrumentation instrumentation instance
@@ -111,6 +112,12 @@ public class HttpServletResponseAgent {
 			}
 		}
 
+		/**
+		 * This Exit Advice method requires that an HttpServletResponse object be the first argument in the
+		 * HTTP request method. This could be improved upon. Ideally, we should not have to depend on the
+		 * HttpServletResponse object being the first argument. Further, in a Spring Boot application it is
+		 * more common to use a ResponseEntity as the return object of a method in a Rest Controller.
+		 */
 		private static class ExitAdviceMethods {
 			@Advice.OnMethodExit(onThrowable = Throwable.class)
 			static void exit(@Advice.Origin final Executable executable,

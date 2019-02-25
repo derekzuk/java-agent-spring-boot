@@ -7,7 +7,7 @@ import static org.mockito.Mockito.when;
 
 import derekzuk.agent.instrument.extension.domain.MetricRecord;
 import derekzuk.agent.instrument.extension.domain.RequestRecord;
-import derekzuk.agent.instrument.extension.httpUrlConnectionUtil.HttpUrlConnectionUtil;
+import derekzuk.agent.instrument.extension.util.HttpUrlConnectionUtil;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;

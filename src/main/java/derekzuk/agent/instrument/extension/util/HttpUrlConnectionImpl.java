@@ -1,4 +1,4 @@
-package derekzuk.agent.instrument.extension.httpUrlConnectionUtil;
+package derekzuk.agent.instrument.extension.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;

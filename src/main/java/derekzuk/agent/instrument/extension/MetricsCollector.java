@@ -2,8 +2,8 @@ package derekzuk.agent.instrument.extension;
 
 import derekzuk.agent.instrument.extension.domain.MetricRecord;
 import derekzuk.agent.instrument.extension.domain.RequestRecord;
-import derekzuk.agent.instrument.extension.httpUrlConnectionUtil.HttpUrlConnectionImpl;
-import derekzuk.agent.instrument.extension.httpUrlConnectionUtil.HttpUrlConnectionUtil;
+import derekzuk.agent.instrument.extension.util.HttpUrlConnectionImpl;
+import derekzuk.agent.instrument.extension.util.HttpUrlConnectionUtil;
 
 import java.util.Collections;
 import java.util.Map;

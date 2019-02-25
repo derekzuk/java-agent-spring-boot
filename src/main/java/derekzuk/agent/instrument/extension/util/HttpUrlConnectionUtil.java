@@ -1,4 +1,4 @@
-package derekzuk.agent.instrument.extension.httpUrlConnectionUtil;
+package derekzuk.agent.instrument.extension.util;
 
 import derekzuk.agent.instrument.extension.domain.MetricRecord;
 import derekzuk.agent.instrument.extension.domain.RequestRecord;
