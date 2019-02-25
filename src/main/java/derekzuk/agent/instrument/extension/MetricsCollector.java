@@ -1,14 +1,10 @@
 package derekzuk.agent.instrument.extension;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
+import derekzuk.agent.instrument.extension.domain.MetricRecord;
+import derekzuk.agent.instrument.extension.domain.RequestRecord;
+import derekzuk.agent.instrument.extension.httpUrlConnectionUtil.HttpUrlConnectionImpl;
+import derekzuk.agent.instrument.extension.httpUrlConnectionUtil.HttpUrlConnectionUtil;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,8 +25,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MetricsCollector {
 
     private static final ConcurrentHashMap<String, MetricRecord> metricRecords = new ConcurrentHashMap<>();
-    static AtomicInteger counter = new AtomicInteger(0);
+    private static ConcurrentHashMap<String, RequestRecord> requestRecordsByUUID = new ConcurrentHashMap<>();
+    private static AtomicInteger counter = new AtomicInteger(0);
+    private static HttpUrlConnectionUtil httpUrlConnectionUtil;
     public static final double alpha = 0.5;
+
+    MetricsCollector(HttpUrlConnectionUtil httpUrlConnectionUtil) {
+        MetricsCollector.httpUrlConnectionUtil = httpUrlConnectionUtil;
+    }
 
     /**
      * Report method call metrics.
@@ -41,8 +43,9 @@ public class MetricsCollector {
     public static void report(final String methodName,
                               final long duration,
                               final long responseSize,
-                              final String requestUniqueID) {
+                              final String UUID) {
 
+        // Establish metrics for the given method
         metricRecords.compute(methodName,
                 (final String key,
                  final MetricRecord curr) -> {
@@ -59,12 +62,6 @@ public class MetricsCollector {
                     long maxResponseSize = determineMaxResponseSize(curr, responseSize);
                     final long newAvgResponseSize = calculateEMA(false, curr.getAvgResponseSize(), responseSize);
 
-                    // Occasionally report to standalone web app
-                    if (counter.incrementAndGet() > 10) {
-                        executePost(getMetricRecords());
-                        counter.set(0);
-                    }
-
                     return new MetricRecord(curr.getCallCounts() + 1,
                             newAvgDuration,
                             minDuration,
@@ -74,6 +71,22 @@ public class MetricsCollector {
                             maxResponseSize);
                 });
 
+        // Add request to Map to be retrieved later by requestUniqueID (UUID)
+        RequestRecord requestRecord = new RequestRecord(UUID, methodName, duration, responseSize);
+
+        requestRecordsByUUID.put(UUID, requestRecord);
+
+        // Occasionally report to standalone web app
+        if (counter.incrementAndGet() > 10) {
+            if (httpUrlConnectionUtil == null) {
+                httpUrlConnectionUtil = new HttpUrlConnectionImpl();
+            }
+            httpUrlConnectionUtil.processMetricRecords(getMetricRecords());
+            httpUrlConnectionUtil.processRequestRecords(getRequestRecords());
+
+            requestRecordsByUUID = new ConcurrentHashMap<>();
+            counter.set(0);
+        }
     }
 
     public static long calculateEMA(boolean isDuration, long currentVal, long newVal) {
@@ -122,51 +135,11 @@ public class MetricsCollector {
         return minDuration;
     }
 
-    private static String executePost(Map<String, MetricRecord> metricRecords) {
-        HttpURLConnection connection = null;
-
-        try {
-            //Create connection
-            URL url = new URL("http://localhost:8081/processMetricRecords");
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", "application/json");
-
-            connection.setUseCaches(false);
-            connection.setDoOutput(true);
-
-            ObjectWriter ow = new ObjectMapper().writer().withDefaultPrettyPrinter();
-            String json = ow.writeValueAsString(metricRecords);
-
-            //Send request
-            DataOutputStream wr = new DataOutputStream(
-                    connection.getOutputStream());
-            wr.writeBytes(json);
-            wr.flush();
-            wr.close();
-
-            //Get Response
-            InputStream is = connection.getInputStream();
-            BufferedReader rd = new BufferedReader(new InputStreamReader(is));
-            StringBuilder response = new StringBuilder(); // or StringBuffer if Java version 5+
-            String line;
-            while ((line = rd.readLine()) != null) {
-                response.append(line);
-                response.append('\r');
-            }
-            rd.close();
-            return response.toString();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
-        }
-    }
-
     public static Map<String, MetricRecord> getMetricRecords() {
         return Collections.unmodifiableMap(metricRecords);
+    }
+
+    public static Map<String, RequestRecord> getRequestRecords() {
+        return requestRecordsByUUID;
     }
 }

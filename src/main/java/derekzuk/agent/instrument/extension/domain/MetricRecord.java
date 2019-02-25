@@ -1,4 +1,4 @@
-package derekzuk.agent.instrument.extension;
+package derekzuk.agent.instrument.extension.domain;
 
 public class MetricRecord {
     private final long callCounts;

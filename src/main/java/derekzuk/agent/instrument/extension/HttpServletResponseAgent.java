@@ -13,20 +13,18 @@ import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Executable;
 import java.util.UUID;
 
+import static net.bytebuddy.matcher.ElementMatchers.any;
+import static net.bytebuddy.matcher.ElementMatchers.isAnnotatedWith;
 import static net.bytebuddy.matcher.ElementMatchers.named;
 
 public class HttpServletResponseAgent {
 	private static volatile Instrumentation globalInstrumentation;
 
-	private static volatile int headerCounter = 0;
-
-	private static final String DEMO_INSTRUMENTED_CLASS_NAME = "com.derekzuk.springbootangular.hello.GreetingController";
-
 	public static long getObjectSize(final Object object) {
 		return globalInstrumentation.getObjectSize(object);
 	}
 
-	public static String getIncrementedHeaderCounter() {
+	public static String createUUID() {
 		return UUID.randomUUID().toString();
 	}
 
@@ -55,17 +53,17 @@ public class HttpServletResponseAgent {
 	 */
 	public static void agentmain(String agentArguments,
 								 Instrumentation instrumentation) {
-		install(DEMO_INSTRUMENTED_CLASS_NAME, instrumentation);
+		install(instrumentation);
 	}
 
-	private static void install(String className, Instrumentation instrumentation) {
+	private static void install(Instrumentation instrumentation) {
 		createAgent(instrumentation);
 	}
 
 	private static AgentBuilder createAgent(Instrumentation instrumentation) {
 		return new AgentBuilder.Default().disableClassFormatChanges()
 				.with(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
-				.type(ElementMatchers.isAnnotatedWith(named("org.springframework.web.bind.annotation.RestController")))
+				.type(isAnnotatedWith(named("org.springframework.web.bind.annotation.RestController")))
 				.transform(new AgentBuilder.Transformer() {
 
 					@Override
@@ -120,14 +118,14 @@ public class HttpServletResponseAgent {
 				HttpServletResponse r = (HttpServletResponse) httpRes;
 
 				// Add unique ID to response header
-				String responseUniqueID = getIncrementedHeaderCounter();
-				r.setHeader("responseUniqueID", responseUniqueID);
+				String UUID = createUUID();
+				r.setHeader("UUID", UUID);
 
 				// Get response size in bytes
 				final long responseSizeBytes = getObjectSize(r);
 
 				// Create metrics
-				MetricsCollector.report(executable.getName(), duration, responseSizeBytes, responseUniqueID);
+				MetricsCollector.report(executable.getName(), duration, responseSizeBytes, UUID);
 			}
 		}
 	}

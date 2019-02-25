@@ -3,17 +3,27 @@ package derekzuk.agent.instrument.extension;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.when;
 
+import derekzuk.agent.instrument.extension.domain.MetricRecord;
+import derekzuk.agent.instrument.extension.domain.RequestRecord;
+import derekzuk.agent.instrument.extension.httpUrlConnectionUtil.HttpUrlConnectionUtil;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.Map;
 
-
+@RunWith(MockitoJUnitRunner.class)
 public class MetricsCollectorTest {
+
+    @Mock
+    HttpUrlConnectionUtil httpUrlConnectionUtilMock;
 
     @Test
     public void testReport() {
-        MetricsCollector mc = new MetricsCollector();
+        MetricsCollector mc = new MetricsCollector(httpUrlConnectionUtilMock);
         String testMethodName = "testReportMethodName";
         long duration = 1;
         long responseSize = 2;
@@ -22,6 +32,10 @@ public class MetricsCollectorTest {
         mc.report(testMethodName, duration, responseSize, requestUniqueID);
 
         Map<String, MetricRecord> metricRecords = mc.getMetricRecords();
+        Map<String, RequestRecord> requestRecords = mc.getRequestRecords();
+
+        when(httpUrlConnectionUtilMock.processMetricRecords(metricRecords)).thenReturn("OK");
+        when(httpUrlConnectionUtilMock.processRequestRecords(requestRecords)).thenReturn("OK");
 
         assertTrue(metricRecords.containsKey(testMethodName));
         assertFalse(metricRecords.containsKey("nonexistantMethodName"));
@@ -36,7 +50,7 @@ public class MetricsCollectorTest {
 
     @Test
     public void testReportMultipleRequests() {
-        MetricsCollector mc = new MetricsCollector();
+        MetricsCollector mc = new MetricsCollector(httpUrlConnectionUtilMock);
 
         // Setup test variables
         String testMethodName = "testReportMultipleRequestsMethodName";
@@ -56,6 +70,10 @@ public class MetricsCollectorTest {
         mc.report(testMethodName, secondDuration, secondResponseSize, secondRequestUniqueID);
 
         Map<String, MetricRecord> metricRecords = mc.getMetricRecords();
+        Map<String, RequestRecord> requestRecords = mc.getRequestRecords();
+
+        when(httpUrlConnectionUtilMock.processMetricRecords(metricRecords)).thenReturn("OK");
+        when(httpUrlConnectionUtilMock.processRequestRecords(requestRecords)).thenReturn("OK");
 
         assertTrue(metricRecords.containsKey(testMethodName));
         assertFalse(metricRecords.containsKey("nonexistantMethodName"));
