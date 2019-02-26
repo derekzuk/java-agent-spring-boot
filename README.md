@@ -4,8 +4,6 @@
 
 This application is a Java Agent that is designed to gather metrics on a Spring Boot application. The metrics gathered are on requests and responses served by the application, and it has been designed to be decoupled from the web application that it is gathering metrics for.
 
-See the corresponding Spring Boot application if you'd like a quick way to test it out: URL here
-
 # Metric Gathering
 This application gathers the following metrics:
 - Request Time
