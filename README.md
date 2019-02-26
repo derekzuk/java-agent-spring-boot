@@ -1,6 +1,6 @@
 # Java Agent for Spring Boot Application
 
-[![Build Status](https://travis-ci.org/joemccann/dillinger.svg?branch=master)](https://travis-ci.org/joemccann/dillinger)
+[![Build Status](https://travis-ci.org/derekzuk/java-agent-spring-boot.svg?branch=master)](https://travis-ci.org/derekzuk/java-agent-spring-boot)
 
 This application is a Java Agent that is designed to gather metrics on a Spring Boot application. The metrics gathered are on requests and responses served by the application, and it has been designed to be decoupled from the web application that it is gathering metrics for.
 
