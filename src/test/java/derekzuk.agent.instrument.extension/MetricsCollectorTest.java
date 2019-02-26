@@ -1,10 +1,5 @@
 package derekzuk.agent.instrument.extension;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.when;
-
 import derekzuk.agent.instrument.extension.domain.MetricRecord;
 import derekzuk.agent.instrument.extension.domain.RequestRecord;
 import derekzuk.agent.instrument.extension.util.HttpUrlConnectionUtil;
@@ -14,6 +9,10 @@ import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.Map;
+
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
 public class MetricsCollectorTest {
@@ -33,9 +32,6 @@ public class MetricsCollectorTest {
 
         Map<String, MetricRecord> metricRecords = mc.getMetricRecords();
         Map<String, RequestRecord> requestRecords = mc.getRequestRecords();
-
-        when(httpUrlConnectionUtilMock.processMetricRecords(metricRecords)).thenReturn("OK");
-        when(httpUrlConnectionUtilMock.processRequestRecords(requestRecords)).thenReturn("OK");
 
         assertTrue(metricRecords.containsKey(testMethodName));
         assertFalse(metricRecords.containsKey("nonexistantMethodName"));
@@ -72,9 +68,6 @@ public class MetricsCollectorTest {
         Map<String, MetricRecord> metricRecords = mc.getMetricRecords();
         Map<String, RequestRecord> requestRecords = mc.getRequestRecords();
 
-        when(httpUrlConnectionUtilMock.processMetricRecords(metricRecords)).thenReturn("OK");
-        when(httpUrlConnectionUtilMock.processRequestRecords(requestRecords)).thenReturn("OK");
-
         assertTrue(metricRecords.containsKey(testMethodName));
         assertFalse(metricRecords.containsKey("nonexistantMethodName"));
         assertEquals(metricRecords.get(testMethodName).getAvgDuration(), finalAvgDuration);
@@ -84,5 +77,44 @@ public class MetricsCollectorTest {
         assertEquals(metricRecords.get(testMethodName).getMinResponseSize(), firstResponseSize);
         assertEquals(metricRecords.get(testMethodName).getMaxResponseSize(), secondResponseSize);
         assertEquals(metricRecords.get(testMethodName).getCallCounts(), 2);
+    }
+
+    @Test
+    public void testReportOverTenRequests() {
+        MetricsCollector mc = new MetricsCollector(httpUrlConnectionUtilMock);
+
+        String testMethodName = "testReportOverTenRequestsMethodName";
+        long duration = 1;
+        long responseSize = 2;
+        String requestUniqueID = "requestUniqueID";
+
+        // Ten requests to trigger the UrlConnectionUtil methods
+        mc.report(testMethodName, duration, responseSize, requestUniqueID);
+        mc.report(testMethodName, duration, responseSize, requestUniqueID);
+        mc.report(testMethodName, duration, responseSize, requestUniqueID);
+        mc.report(testMethodName, duration, responseSize, requestUniqueID);
+        mc.report(testMethodName, duration, responseSize, requestUniqueID);
+        mc.report(testMethodName, duration, responseSize, requestUniqueID);
+        mc.report(testMethodName, duration, responseSize, requestUniqueID);
+        mc.report(testMethodName, duration, responseSize, requestUniqueID);
+        mc.report(testMethodName, duration, responseSize, requestUniqueID);
+        mc.report(testMethodName, duration, responseSize, requestUniqueID);
+        mc.report(testMethodName, duration, responseSize, requestUniqueID);
+
+        Map<String, MetricRecord> metricRecords = mc.getMetricRecords();
+        Map<String, RequestRecord> requestRecords = mc.getRequestRecords();
+
+        // The UrlConnectionUtil methods are triggered to report data to the external web app
+        verify(httpUrlConnectionUtilMock, times(1)).processMetricRecords(metricRecords);
+        assertTrue(metricRecords.containsKey(testMethodName));
+        assertFalse(metricRecords.containsKey("nonexistantMethodName"));
+        assertEquals(metricRecords.get(testMethodName).getAvgDuration(), duration);
+        assertEquals(metricRecords.get(testMethodName).getMinDuration(), duration);
+        assertEquals(metricRecords.get(testMethodName).getMaxDuration(), duration);
+        assertEquals(metricRecords.get(testMethodName).getAvgResponseSize(), responseSize);
+        assertEquals(metricRecords.get(testMethodName).getMinResponseSize(), responseSize);
+        assertEquals(metricRecords.get(testMethodName).getMaxResponseSize(), responseSize);
+        assertEquals(metricRecords.get(testMethodName).getCallCounts(), 11);
+
     }
 }

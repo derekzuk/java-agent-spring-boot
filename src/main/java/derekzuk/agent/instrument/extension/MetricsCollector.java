@@ -140,6 +140,6 @@ public class MetricsCollector {
     }
 
     public static Map<String, RequestRecord> getRequestRecords() {
-        return requestRecordsByUUID;
+        return Collections.unmodifiableMap(requestRecordsByUUID);
     }
 }
