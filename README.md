@@ -19,9 +19,9 @@ In order to view the metrics, you can use the corresponsing Java Agent Web Appli
 This application has been integrated with Travis-CI, includes unit tests, and stores state in memory. It is also platform agnostic.
 
 # Getting Started
-To run this application, first obtain a jar file for both the Java Agent as well as the test application.
+To run this application, first obtain a jar file for both the Java Agent as well as the test application. Run this command in both project root directories and find the jar file in the /target/ directory.
 ```
-mvn clean install
+mvnw clean install
 ```
 Then start the test application with your Java Agent application using the javaagent option:
 ```
@@ -29,10 +29,15 @@ java -javaagent:directory/of/java-agent.jar -jar directory/of/test-application.j
 ```
 Then start the corresponding Java Agent Web Application (https://github.com/derekzuk/java-agent-web-app)
 ```
-mvn clean install
-mvn spring-boot:run
+mvnw clean install
+mvnw spring-boot:run
 ```
-Navigate through the test application: http://localhost:8080/
+Finally, start the test application. Navigate to the root directory and run the application:
+```
+npm install
+ng serve
+```
+Navigate to the test application: http://localhost:4200/
 Observe the metrics: http://localhost:8081/
 
 ### Execution of agent with Attach API
