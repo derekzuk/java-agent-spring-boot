@@ -19,7 +19,7 @@ In order to view the metrics, you can use the corresponsing Java Agent Web Appli
 This application has been integrated with Travis-CI, includes unit tests, and stores state in memory. It is also platform agnostic.
 
 # Getting Started
-To run this application, first obtain a jar file for both the Java Agent as well as the test application. Run this command in both project root directories and find the jar file in the /target/ directory.
+To run this application, first obtain a jar file for both the Java Agent as well as the simple test application (https://github.com/derekzuk/sample-spring-boot-angular). Run this command in both project root directories and find the jar file in the /target/ directory.
 ```
 mvnw clean install
 ```
@@ -27,18 +27,20 @@ Then start the test application with your Java Agent application using the javaa
 ```
 java -javaagent:directory/of/java-agent.jar -jar directory/of/test-application.jar
 ```
-Then start the corresponding Java Agent Web Application (https://github.com/derekzuk/java-agent-web-app)
+Then start the corresponding Java Agent Web Application (https://github.com/derekzuk/java-agent-web-app):
 ```
 mvnw clean install
 mvnw spring-boot:run
+npm install
+ng serve --port 4201
 ```
-Finally, start the test application. Navigate to the root directory and run the application:
+Finally, start the front-end of the test application (https://github.com/derekzuk/sample-spring-boot-angular). Navigate to the root directory and run the following commands:
 ```
 npm install
 ng serve
 ```
-Navigate to the test application: http://localhost:4200/
-Observe the metrics: http://localhost:8081/
+Navigate to the simple test application: http://localhost:4200/
+Observe the metrics: http://localhost:4201/
 
 ### Execution of agent with Attach API
 
