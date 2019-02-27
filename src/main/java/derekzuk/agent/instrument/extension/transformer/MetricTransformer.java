@@ -32,7 +32,7 @@ public class MetricTransformer implements AgentBuilder.Transformer {
 
         final AsmVisitorWrapper putMappingVisitor =
                 Advice.to(EnterAdvice.class, ExitAdviceMethods.class)
-                        .on(ElementMatchers.isAnnotatedWith(named("org.springframework.web.bind.annotation.PostMapping")));
+                        .on(ElementMatchers.isAnnotatedWith(named("org.springframework.web.bind.annotation.PutMapping")));
 
         return builder.visit(getMappingVisitor).visit(postMappingVisitor).visit(putMappingVisitor);
     }
@@ -66,6 +66,7 @@ public class MetricTransformer implements AgentBuilder.Transformer {
             r.setHeader("UUID", UUID);
 
             // Get response size in bytes
+            // TODO: This calculates only the size of the HttpServletResponseAgent object, not the response body.
             final long responseSizeBytes = HttpServletResponseAgent.getObjectSize(r);
 
             // Create metrics
