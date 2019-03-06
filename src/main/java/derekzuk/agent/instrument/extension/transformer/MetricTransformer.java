@@ -54,23 +54,28 @@ public class MetricTransformer implements AgentBuilder.Transformer {
         @Advice.OnMethodExit(onThrowable = Throwable.class)
         static void exit(@Advice.Origin final Executable executable,
                          @Advice.Enter final long startTime,
-                         @Advice.Argument(0) Object httpRes) {
-            // Get duration
-            final long duration = System.nanoTime() - startTime;
+                         @Advice.AllArguments Object[] args) {
+            // Obtain the HttpServletResponse from the method arguments
+            for (Object arg : args) {
+                if (arg instanceof HttpServletResponse) {
+                    // Get duration
+                    final long duration = System.nanoTime() - startTime;
 
-            // Get response object
-            HttpServletResponse r = (HttpServletResponse) httpRes;
+                    // Get response object
+                    HttpServletResponse r = (HttpServletResponse) arg;
 
-            // Add unique ID to response header
-            String UUID = HttpServletResponseAgent.createUUID();
-            r.setHeader("UUID", UUID);
+                    // Add unique ID to response header
+                    String UUID = HttpServletResponseAgent.createUUID();
+                    r.setHeader("UUID", UUID);
 
-            // Get response size in bytes
-            // TODO: This calculates only the size of the HttpServletResponseAgent object, not the response body.
-            final long responseSizeBytes = HttpServletResponseAgent.getObjectSize(r);
+                    // Get response size in bytes
+                    // TODO: This calculates only the size of the HttpServletResponseAgent object, not the response body.
+                    final long responseSizeBytes = HttpServletResponseAgent.getObjectSize(r);
 
-            // Create metrics
-            MetricsCollector.report(executable.getName(), duration, responseSizeBytes, UUID);
+                    // Create metrics
+                    MetricsCollector.report(executable.getName(), duration, responseSizeBytes, UUID);
+                }
+            }
         }
     }
 }
