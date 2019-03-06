@@ -69,7 +69,7 @@ public class MetricTransformer implements AgentBuilder.Transformer {
                     r.setHeader("UUID", UUID);
 
                     // Get response size in bytes
-                    // TODO: This calculates only the size of the HttpServletResponseAgent object, not the response body.
+                    // TODO: This calculates only the size of the HttpServletResponse object, not the response body.
                     final long responseSizeBytes = HttpServletResponseAgent.getObjectSize(r);
 
                     // Create metrics
