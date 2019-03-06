@@ -55,7 +55,7 @@ public class MetricTransformer implements AgentBuilder.Transformer {
         static void exit(@Advice.Origin final Executable executable,
                          @Advice.Enter final long startTime,
                          @Advice.AllArguments Object[] args) {
-            // Obtain the HttpServletResponse from the method arguments
+            // Get the HttpServletResponse from the method arguments
             for (Object arg : args) {
                 if (arg instanceof HttpServletResponse) {
                     // Get duration
